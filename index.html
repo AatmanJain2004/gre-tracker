@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRE 30-Day Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2230;
+    --paper:#F7F6F2;
+    --surface:#FFFFFF;
+    --line:#E4E1D6;
+    --line-strong:#CFCBBC;
+    --muted:#6B6F78;
+    --faint:#9A9DA4;
+    --signal:#E8A33D;       /* marigold: progress / today / goal hit */
+    --signal-deep:#C9852A;
+    --quant:#3D6FB4;        /* blue */
+    --verbal:#B0568C;       /* plum */
+    --good:#4A9B6E;
+    --good-bg:#E9F4EE;
+    --bad:#C0563E;
+    --shadow:0 1px 2px rgba(28,34,48,.05), 0 8px 24px rgba(28,34,48,.05);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 80px;}
+  .mono{font-family:'Space Mono',monospace;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-.01em;}
+
+  /* ---------- HEADER ---------- */
+  .topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .brand .eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--signal-deep);}
+  .brand h1{font-size:26px;font-weight:700;line-height:1.05;margin-top:2px;}
+  .countdown{text-align:right;}
+  .countdown .num{font-family:'Space Mono',monospace;font-weight:700;font-size:30px;line-height:1;color:var(--ink);}
+  .countdown .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .countdown input{font-family:'Space Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;color:var(--muted);background:var(--surface);margin-top:4px;}
+  .countdown input:focus{outline:2px solid var(--signal);outline-offset:1px;border-color:var(--signal);}
+
+  /* ---------- SCANTRON STRIP ---------- */
+  .scantron{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;box-shadow:var(--shadow);margin-bottom:16px;}
+  .scantron .strip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .scantron .strip-head span{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .bubbles{display:grid;grid-template-columns:repeat(15,1fr);gap:7px;}
+  .bub{aspect-ratio:1;border:1.5px solid var(--line-strong);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;color:var(--faint);cursor:pointer;background:transparent;padding:0;transition:transform .12s ease;}
+  .bub:hover{transform:scale(1.12);}
+  .bub.done{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .bub.partial{background:var(--signal);border-color:var(--signal);color:#fff;}
+  .bub.today{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--signal);}
+  .bub.rest{border-style:dashed;}
+  .bub:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+
+  /* ---------- TABS ---------- */
+  .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:18px;overflow-x:auto;}
+  .tab{flex:1;min-width:auto;border:none;background:transparent;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;color:var(--muted);padding:9px 6px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:all .15s ease;}
+  .tab[aria-selected="true"]{background:var(--ink);color:#fff;}
+  .tab:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+
+  /* ---------- TODAY ---------- */
+  .daynav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .daynav button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);}
+  .daynav button:hover{border-color:var(--line-strong);}
+  .daynav button:disabled{opacity:.35;cursor:not-allowed;}
+  .daynav button:focus-visible{outline:2px solid var(--signal);outline-offset:1px;}
+  .day-center{text-align:center;}
+  .day-center .wk{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--signal-deep);}
+  .day-center h2{font-size:20px;margin-top:2px;}
+  .day-center .dnum{font-family:'Space Mono',monospace;color:var(--faint);font-size:12px;}
+
+  .tasklist{list-style:none;margin:0;padding:0;}
+  .tasklist li{display:flex;align-items:flex-start;gap:11px;padding:11px 2px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .tasklist li:last-child{border-bottom:none;}
+  .check{flex-shrink:0;width:22px;height:22px;border:1.5px solid var(--line-strong);border-radius:7px;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+  .tasklist li.done .check{background:var(--good);border-color:var(--good);}
+  .check svg{opacity:0;width:13px;height:13px;}
+  .tasklist li.done .check svg{opacity:1;}
+  .tasklist li.done .txt{color:var(--faint);text-decoration:line-through;}
+  .txt{font-size:14.5px;}
+
+  .sectionlabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;}
+
+  /* counters */
+  .counters{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .counter{border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .counter .cname{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .counter .cgoal{font-size:10.5px;color:var(--faint);font-family:'Space Mono',monospace;}
+  .counter .crow{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .counter button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--paper);font-size:16px;cursor:pointer;color:var(--ink);line-height:1;}
+  .counter button:hover{background:var(--surface);border-color:var(--line-strong);}
+  .counter input{width:100%;text-align:center;font-family:'Space Mono',monospace;font-weight:700;font-size:20px;border:none;background:transparent;color:var(--ink);min-width:0;}
+  .counter input:focus{outline:none;}
+  .counter.hit{background:var(--good-bg);border-color:#bfe3cd;}
+
+  /* ---------- PLAN ---------- */
+  .planweek{margin-bottom:6px;}
+  .planweek > .whead{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;margin:18px 0 8px;display:flex;align-items:center;gap:8px;}
+  .planweek > .whead .tag{font-family:'Space Mono',monospace;font-size:10px;background:var(--ink);color:#fff;padding:2px 7px;border-radius:20px;letter-spacing:.06em;}
+  .planday{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;}
+  .planday summary{list-style:none;cursor:pointer;padding:13px 15px;display:flex;align-items:center;gap:12px;}
+  .planday summary::-webkit-details-marker{display:none;}
+  .pd-dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-strong);flex-shrink:0;font-family:'Space Mono',monospace;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--faint);}
+  .pd-dot.done{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .pd-dot.partial{background:var(--signal);border-color:var(--signal);color:#fff;}
+  .pd-title{font-weight:600;font-size:14.5px;flex:1;}
+  .pd-meta{font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);}
+  .planday .pbody{padding:0 15px 14px 51px;}
+  .planday ul{margin:0;padding:0;list-style:none;}
+  .planday .pbody li{font-size:13.5px;color:var(--muted);padding:4px 0;display:flex;gap:8px;}
+  .planday .pbody li::before{content:"–";color:var(--line-strong);}
+
+  /* ---------- SCORES ---------- */
+  .meter{margin-bottom:18px;}
+  .meter .mhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+  .meter .mname{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;}
+  .meter .mname .pill{font-family:'Space Mono',monospace;font-size:10px;padding:2px 7px;border-radius:20px;color:#fff;margin-left:6px;vertical-align:middle;}
+  .meter .mval{font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);}
+  .meter .mval b{color:var(--ink);font-size:18px;}
+  .track{position:relative;height:14px;background:var(--paper);border:1px solid var(--line);border-radius:20px;}
+  .track .fill{position:absolute;top:0;left:0;height:100%;border-radius:20px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+  .track .goal{position:absolute;top:-5px;width:2px;height:24px;background:var(--ink);}
+  .track .goal::after{content:attr(data-g);position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:9px;color:var(--ink);white-space:nowrap;}
+  .scale-ends{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:9.5px;color:var(--faint);margin-top:3px;}
+
+  .composite{display:flex;align-items:baseline;gap:10px;padding:14px 0 4px;border-top:1px dashed var(--line);margin-top:6px;}
+  .composite .big{font-family:'Space Mono',monospace;font-weight:700;font-size:34px;}
+  .composite .gtext{font-size:13px;color:var(--muted);}
+  .composite .delta{font-family:'Space Mono',monospace;font-size:12px;padding:2px 8px;border-radius:20px;}
+  .delta.under{background:#FBEAD3;color:var(--signal-deep);}
+  .delta.over{background:var(--good-bg);color:var(--good);}
+
+  .formrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+  .field{flex:1;min-width:90px;}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-family:'Inter',sans-serif;font-size:14px;background:var(--surface);color:var(--ink);}
+  .field input.mono{font-family:'Space Mono',monospace;}
+  .field input:focus,.field select:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+  .btn{border:none;background:var(--ink);color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;padding:10px 16px;border-radius:10px;cursor:pointer;}
+  .btn:hover{background:#2a3245;}
+  .btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+  .btn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+
+  .loglist{list-style:none;margin:14px 0 0;padding:0;}
+  .logitem{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+  .logitem:last-child{border-bottom:none;}
+  .logitem .ldate{font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);width:70px;flex-shrink:0;}
+  .logitem .lscores{font-family:'Space Mono',monospace;font-size:13px;flex:1;}
+  .logitem .lscores .q{color:var(--quant);font-weight:700;}
+  .logitem .lscores .v{color:var(--verbal);font-weight:700;}
+  .logitem .ldel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:16px;padding:4px;}
+  .logitem .ldel:hover{color:#c0392b;}
+
+  /* ---------- ERRORS ---------- */
+  .typechips{display:flex;gap:6px;}
+  .chip{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;font-size:12.5px;cursor:pointer;color:var(--muted);}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .errcard{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;border-left:3px solid var(--line-strong);}
+  .errcard.concept{border-left-color:var(--quant);}
+  .errcard.silly{border-left-color:var(--signal);}
+  .errcard .etop{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .errcard .etopic{font-weight:600;font-size:14px;}
+  .errcard .etype{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:20px;}
+  .etype.concept{background:#E7EFF8;color:var(--quant);}
+  .etype.silly{background:#FBEAD3;color:var(--signal-deep);}
+  .errcard .efield{font-size:13px;color:var(--muted);margin-top:5px;}
+  .errcard .efield b{color:var(--ink);font-weight:600;}
+  .errcard .ldel{float:right;}
+
+  /* error-log uploads + images */
+  .uprow{display:flex;gap:10px;margin:8px 0 12px;}
+  .uploadslot{flex:1;}
+  .uplabel{position:relative;display:flex;align-items:center;justify-content:center;height:92px;border:1.5px dashed var(--line-strong);border-radius:12px;cursor:pointer;background:var(--paper);transition:border-color .15s ease;}
+  .uplabel:hover{border-color:var(--signal);}
+  .uplabel input{position:absolute;width:1px;height:1px;opacity:0;}
+  .upface{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:12.5px;}
+  .upic{font-size:22px;color:var(--faint);line-height:1;}
+  .upprev{position:relative;}
+  .upprev img{width:100%;height:92px;object-fit:cover;border-radius:12px;border:1px solid var(--line);display:block;}
+  .upx{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(28,34,48,.85);color:#fff;font-size:15px;cursor:pointer;line-height:1;}
+
+  .errfilter{display:flex;align-items:center;gap:8px;margin:18px 0 10px;}
+  .errfilter label{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex-shrink:0;}
+  .errfilter select{flex:1;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13.5px;background:var(--surface);color:var(--ink);}
+  .errfilter select:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+
+  .thumbrow{display:flex;gap:8px;margin-top:11px;}
+  .thumb{position:relative;width:58px;height:58px;border-radius:9px;border:1px solid var(--line);overflow:hidden;cursor:pointer;padding:0;background:var(--paper);flex-shrink:0;}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb .tlbl{position:absolute;top:2px;left:2px;background:var(--ink);color:#fff;font-family:'Space Mono',monospace;font-size:9px;padding:1px 5px;border-radius:5px;z-index:1;}
+  .thumb:hover{border-color:var(--signal);}
+  .thumb:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+
+  .lightbox{position:fixed;inset:0;background:rgba(18,22,32,.92);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .lightbox.show{display:flex;animation:fade .2s ease;}
+  .lightbox img{max-width:94vw;max-height:88vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .lightbox .lbx{position:absolute;top:16px;right:18px;width:42px;height:42px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:24px;cursor:pointer;line-height:1;}
+  .lightbox .lbx:hover{background:rgba(255,255,255,.28);}
+
+  /* sync gate */
+  .syncgate{position:fixed;inset:0;background:rgba(18,22,32,.6);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;}
+  .syncbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.25);}
+  .synceyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--signal-deep);}
+  .syncbox h2{font-size:21px;margin:4px 0 8px;}
+  .synccopy{font-size:13.5px;color:var(--muted);margin:0 0 14px;}
+  .syncbox input{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;font-family:'Space Mono',monospace;background:var(--paper);color:var(--ink);}
+  .syncbox input:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+  .synchint{font-size:11.5px;color:var(--faint);margin:10px 0 0;}
+  .synctag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;background:none;border:none;padding:0;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;}
+  .synctag b{color:var(--ink);}
+  .synctag:hover{color:var(--ink);}
+  .saved.bad{background:var(--bad);}
+
+  /* ---------- VOCAB ---------- */
+  .vphead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;}
+
+  .vgoal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;}
+  .vgoal-edit{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .vgoal-edit input{width:54px;text-align:center;font-family:'Space Mono',monospace;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 4px;background:var(--surface);color:var(--ink);}
+  .vgoal-edit input:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+  .vgoal-bar{height:12px;background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;}
+  .vgoal-fill{height:100%;background:var(--signal);border-radius:20px;transition:width .4s ease;}
+  .vgoalcard.met{background:var(--good-bg);border-color:#bfe3cd;}
+  .vgoalcard.met .vgoal-fill{background:var(--good);}
+  .vgoal-meta{font-size:13px;color:var(--muted);margin-top:9px;}
+  .vgoal-meta b{font-family:'Space Mono',monospace;color:var(--ink);font-size:15px;}
+  .vgoal-done{color:var(--good);font-weight:600;}
+  .vporder{display:flex;align-items:center;gap:8px;margin:-2px 0 14px;}
+  .vporder .olabel{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .flash-good{background:var(--good)!important;}
+  .flash-good:hover{background:#3d8a5f!important;}
+  .flash-bad{background:var(--bad)!important;}
+  .flash-bad:hover{background:#a8472f!important;}
+  .flash-prog{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px;letter-spacing:.06em;}
+  .flash-card{width:100%;border:1px solid var(--line);border-radius:14px;background:var(--paper);padding:36px 20px;text-align:center;cursor:pointer;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:border-color .15s ease;}
+  .flash-card:hover{border-color:var(--line-strong);}
+  .flash-card:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+  .fword{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;letter-spacing:-.01em;}
+  .fhint{font-size:12px;color:var(--faint);}
+  .fmean{font-size:17px;color:var(--ink);line-height:1.4;}
+  .fnote{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--verbal);}
+  .flash-actions{display:flex;gap:10px;margin-top:14px;}
+  .flash-actions .btn{flex:1;}
+
+  .bulkbox{margin-top:8px;border-top:1px dashed var(--line);padding-top:12px;}
+  .bulkbox summary{cursor:pointer;font-size:13px;color:var(--quant);font-weight:600;list-style:none;}
+  .bulkbox summary::-webkit-details-marker{display:none;}
+  .bulkhint{font-size:12px;color:var(--muted);margin:10px 0 8px;}
+  .bulkbox textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:'Inter',sans-serif;font-size:13.5px;resize:vertical;background:var(--surface);color:var(--ink);margin-bottom:8px;}
+  .bulkbox textarea:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+
+  .vsearch{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;background:var(--surface);color:var(--ink);max-width:150px;font-family:'Inter',sans-serif;}
+  .vsearch:focus{outline:2px solid var(--signal);outline-offset:0;border-color:var(--signal);}
+  .vrow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);}
+  .vrow:last-child{border-bottom:none;}
+  .vstatus{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .vstatus.mastered{background:var(--good);}
+  .vstatus.hard{background:var(--bad);}
+  .vstatus.learning{background:var(--line-strong);}
+  .vword{font-weight:600;font-size:14px;flex-shrink:0;}
+  .vmean{color:var(--muted);font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .vbox{font-family:'Space Mono',monospace;font-size:10px;color:var(--faint);flex-shrink:0;}
+  .vdel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;}
+  .vdel:hover{color:#c0392b;}
+
+  /* ---------- STATS ---------- */
+  .ringrow{display:flex;gap:14px;flex-wrap:wrap;}
+  .ringcard{flex:1;min-width:130px;text-align:center;}
+  .ringcard .rbig{font-family:'Space Mono',monospace;font-weight:700;font-size:34px;line-height:1;}
+  .ringcard .rsub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .bar{margin-bottom:13px;}
+  .bar .bhead{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .bar .bhead .bv{font-family:'Space Mono',monospace;color:var(--muted);}
+  .bar .btrack{height:9px;background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;}
+  .bar .bfill{height:100%;border-radius:20px;transition:width .5s ease;}
+
+  .empty{text-align:center;color:var(--faint);font-size:13.5px;padding:18px 8px;}
+  .saved{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'Space Mono',monospace;font-size:11px;padding:7px 14px;border-radius:20px;opacity:0;transition:opacity .25s ease;pointer-events:none;letter-spacing:.06em;}
+  .saved.show{opacity:.95;}
+
+  @media (max-width:560px){
+    .bubbles{grid-template-columns:repeat(10,1fr);}
+    .brand h1{font-size:22px;}
+    .countdown .num{font-size:24px;}
+    .composite .big{font-size:28px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="eyebrow">30-Day Sprint · Goal 326</div>
+      <h1>GRE Tracker</h1>
+      <button class="synctag" id="syncTag" hidden>⟲ synced as <b id="syncTagCode"></b> · change</button>
+    </div>
+    <div class="countdown">
+      <div class="num" id="cdNum">—</div>
+      <div class="lbl">days to test</div>
+      <input type="date" id="testDate" aria-label="Test date">
+    </div>
+  </div>
+
+  <div class="scantron">
+    <div class="strip-head">
+      <span>Answer Sheet · 30 Days</span>
+      <span id="stripCount">0 / 30 complete</span>
+    </div>
+    <div class="bubbles" id="bubbles"></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="today" aria-selected="true">Today</button>
+    <button class="tab" role="tab" data-view="plan" aria-selected="false">Plan</button>
+    <button class="tab" role="tab" data-view="vocab" aria-selected="false">Vocab</button>
+    <button class="tab" role="tab" data-view="scores" aria-selected="false">Scores</button>
+    <button class="tab" role="tab" data-view="errors" aria-selected="false">Errors</button>
+    <button class="tab" role="tab" data-view="stats" aria-selected="false">Stats</button>
+  </div>
+
+  <!-- TODAY -->
+  <section class="view active" id="view-today">
+    <div class="daynav">
+      <button id="prevDay" aria-label="Previous day">‹</button>
+      <div class="day-center">
+        <div class="wk" id="tWeek"></div>
+        <h2 id="tTitle"></h2>
+        <div class="dnum" id="tDnum"></div>
+      </div>
+      <button id="nextDay" aria-label="Next day">›</button>
+    </div>
+
+    <div class="card">
+      <p class="sectionlabel">Today's checklist</p>
+      <ul class="tasklist" id="taskList"></ul>
+    </div>
+
+    <div class="card">
+      <p class="sectionlabel">Volume log · daily minimum shown</p>
+      <div class="counters" id="counters"></div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="view-plan"></section>
+
+  <!-- VOCAB -->
+  <section class="view" id="view-vocab">
+    <div class="card vgoalcard" id="vGoalCard">
+      <div class="vgoal-top">
+        <p class="sectionlabel" style="margin:0">Today's vocab goal</p>
+        <span class="vgoal-edit">Goal <input id="vGoalInput" type="number" min="1" inputmode="numeric"></span>
+      </div>
+      <div class="vgoal-bar"><div class="vgoal-fill" id="vgFill"></div></div>
+      <div class="vgoal-meta"><b id="vgReviewed">0</b> of <span id="vgGoalNum">30</span> reviewed today · <span id="vgAdded">0</span> added <span id="vgDone" class="vgoal-done" hidden>· ✓ goal reached</span></div>
+    </div>
+
+    <div class="card">
+      <div class="vphead">
+        <p class="sectionlabel" style="margin:0">Practice</p>
+        <div class="typechips" id="vpFilter">
+          <button class="chip" data-f="learning" aria-pressed="true">Learning</button>
+          <button class="chip" data-f="hard" aria-pressed="false">Hard</button>
+          <button class="chip" data-f="all" aria-pressed="false">All</button>
+        </div>
+      </div>
+      <div class="vporder">
+        <span class="olabel">Order</span>
+        <div class="typechips" id="vpOrder">
+          <button class="chip" data-o="random" aria-pressed="true">Random</button>
+          <button class="chip" data-o="hard" aria-pressed="false">Hardest first</button>
+        </div>
+      </div>
+      <div id="vpArea"></div>
+    </div>
+
+    <div class="card">
+      <p class="sectionlabel">Add words</p>
+      <div class="formrow" style="margin-bottom:8px">
+        <div class="field" style="flex:1"><label>Word</label><input id="vWord" placeholder="ephemeral"></div>
+        <div class="field" style="flex:2"><label>Meaning</label><input id="vMeaning" placeholder="lasting a very short time"></div>
+      </div>
+      <div class="formrow" style="margin-bottom:6px">
+        <div class="field"><label>Synonyms / usage (optional)</label><input id="vNote" placeholder="transient, fleeting"></div>
+        <button class="btn" id="addWord">Add word</button>
+      </div>
+      <details class="bulkbox">
+        <summary>＋ Paste a list (add 30 at once)</summary>
+        <p class="bulkhint">One per line — <span class="mono">word = meaning</span> &nbsp;(also accepts : – — or a tab)</p>
+        <textarea id="vBulk" rows="5" placeholder="ephemeral = lasting a very short time&#10;laconic = using few words&#10;prosaic = dull, ordinary"></textarea>
+        <button class="btn ghost" id="addBulk">Add all</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="vphead">
+        <p class="sectionlabel" style="margin:0">Your words · <span id="vCount">0</span></p>
+        <input id="vSearch" class="vsearch" placeholder="Search…">
+      </div>
+      <div id="vList"></div>
+    </div>
+  </section>
+
+  <!-- SCORES -->
+  <section class="view" id="view-scores">
+    <div class="card">
+      <p class="sectionlabel">Best mock vs goal band</p>
+      <div class="meter">
+        <div class="mhead">
+          <div class="mname">Quant <span class="pill" style="background:var(--quant)">130–170</span></div>
+          <div class="mval">best <b id="bestQ">—</b> · goal 169</div>
+        </div>
+        <div class="track">
+          <div class="fill" id="fillQ" style="background:var(--quant);width:0"></div>
+          <div class="goal" data-g="169" style="left:97.5%"></div>
+        </div>
+        <div class="scale-ends"><span>130</span><span>170</span></div>
+      </div>
+      <div class="meter">
+        <div class="mhead">
+          <div class="mname">Verbal <span class="pill" style="background:var(--verbal)">130–170</span></div>
+          <div class="mval">best <b id="bestV">—</b> · goal 157</div>
+        </div>
+        <div class="track">
+          <div class="fill" id="fillV" style="background:var(--verbal);width:0"></div>
+          <div class="goal" data-g="157" style="left:67.5%"></div>
+        </div>
+        <div class="scale-ends"><span>130</span><span>170</span></div>
+      </div>
+      <div class="composite">
+        <span class="big" id="bestComposite">—</span>
+        <span class="gtext">best composite · goal <b>326</b></span>
+        <span class="delta under" id="compDelta"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sectionlabel">Log a mock or section</p>
+      <div class="formrow">
+        <div class="field" style="flex:2"><label>Label</label><input id="sLabel" placeholder="e.g. Full mock 1"></div>
+        <div class="field"><label>Quant</label><input class="mono" id="sQuant" type="number" min="130" max="170" placeholder="168"></div>
+        <div class="field"><label>Verbal</label><input class="mono" id="sVerbal" type="number" min="130" max="170" placeholder="156"></div>
+        <button class="btn" id="addScore">Add</button>
+      </div>
+      <ul class="loglist" id="scoreLog"></ul>
+    </div>
+  </section>
+
+  <!-- ERRORS -->
+  <section class="view" id="view-errors">
+    <div class="card">
+      <p class="sectionlabel">Log a mistake</p>
+      <div class="formrow" style="margin-bottom:10px">
+        <div class="field" style="flex:2">
+          <label>Topic / concept</label>
+          <select id="eTopic"></select>
+        </div>
+        <div class="field" style="flex:0 0 auto;align-self:flex-end">
+          <label>Type</label>
+          <div class="typechips" id="eTypeChips">
+            <button class="chip" data-type="concept" aria-pressed="true">Concept gap</button>
+            <button class="chip" data-type="silly" aria-pressed="false">Silly slip</button>
+          </div>
+        </div>
+      </div>
+      <div class="formrow" style="margin-bottom:4px">
+        <div class="field"><label>Why it went wrong</label><input id="eWhy" placeholder="Misread the constraint"></div>
+        <div class="field"><label>Correct method</label><input id="eMethod" placeholder="1 − P(none)"></div>
+      </div>
+      <div class="uprow">
+        <div class="uploadslot" id="slotQ">
+          <label class="uplabel"><input type="file" accept="image/*"><span class="upface"><span class="upic">＋</span><span>Question photo</span></span></label>
+          <div class="upprev" hidden><img alt="Question preview"><button class="upx" type="button" aria-label="Remove question photo">×</button></div>
+        </div>
+        <div class="uploadslot" id="slotA">
+          <label class="uplabel"><input type="file" accept="image/*"><span class="upface"><span class="upic">＋</span><span>Answer photo</span></span></label>
+          <div class="upprev" hidden><img alt="Answer preview"><button class="upx" type="button" aria-label="Remove answer photo">×</button></div>
+        </div>
+      </div>
+      <button class="btn" id="addErr">Add to error log</button>
+
+      <div class="errfilter">
+        <label>Filter</label>
+        <select id="errFilterSel"></select>
+      </div>
+      <div id="errList"></div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="view" id="view-stats">
+    <div class="card">
+      <p class="sectionlabel">Where you stand</p>
+      <div class="ringrow">
+        <div class="ringcard"><div class="rbig" id="stDays">0</div><div class="rsub">days finished /30</div></div>
+        <div class="ringcard"><div class="rbig" id="stStreak">0</div><div class="rsub">day streak</div></div>
+        <div class="ringcard"><div class="rbig" id="stTasks">0%</div><div class="rsub">tasks done</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="sectionlabel" id="weekStatsLabel">This week's volume vs target</p>
+      <div id="weekBars"></div>
+    </div>
+    <div class="card">
+      <p class="sectionlabel">All-time volume</p>
+      <div id="totalBars"></div>
+    </div>
+  </section>
+
+</div>
+<div class="saved" id="savedToast">saved</div>
+<div class="lightbox" id="lightbox"><button class="lbx" aria-label="Close">×</button><img alt="Full size"></div>
+<div class="syncgate" id="syncGate" hidden>
+  <div class="syncbox">
+    <div class="synceyebrow">Cross-device sync</div>
+    <h2 id="syncTitle">Enter your sync code</h2>
+    <p class="synccopy">Use the same code on every device — phone, laptop — and your progress stays in sync. Pick any private phrase.</p>
+    <input id="syncInput" placeholder="e.g. arjun-gre-2026" autocomplete="off">
+    <button class="btn" id="syncGo" style="width:100%;margin-top:4px">Sync this device</button>
+    <p class="synchint">Anyone who knows this code can see this data — keep it private.</p>
+  </div>
+</div>
+
+<script>
+/* ---------------- STORAGE LAYER ----------------
+   Inside Claude, window.storage is provided. On a self-hosted deploy
+   (Vercel) it's absent, so we talk to our own /api/kv endpoint, keyed by
+   a private "sync code" so the same data follows you across devices. */
+let SYNC_CODE = "";
+let NEEDS_SYNC_CODE = false;
+let REMOTE_STORAGE = false;
+if(!window.storage){
+  REMOTE_STORAGE = true;
+  try{ SYNC_CODE = localStorage.getItem("gre_sync_code") || ""; }catch(e){ SYNC_CODE=""; }
+  if(!SYNC_CODE) NEEDS_SYNC_CODE = true;
+  async function api(action, key, value){
+    const r = await fetch("/api/kv", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action, key, value, code: SYNC_CODE }) });
+    if(!r.ok){ let msg="sync error "+r.status; try{ const j=await r.json(); if(j.error) msg=j.error; }catch(_){} throw new Error(msg); }
+    return r.json();
+  }
+  window.storage = {
+    async get(key){ const o=await api("get", key); return (o && o.value!=null) ? {key, value:o.value} : null; },
+    async set(key, value){ await api("set", key, String(value)); return {key, value}; },
+    async delete(key){ await api("delete", key); return {key, deleted:true}; }
+  };
+}
+
+/* ---------------- PLAN DATA ---------------- */
+const WEEKS = [
+  {name:"Week 1 · Diagnosis + Foundation", tag:"W1", days:[1,2,3,4,5,6,7]},
+  {name:"Week 2 · Timed Practice",         tag:"W2", days:[8,9,10,11,12,13,14]},
+  {name:"Week 3 · Score Jump",             tag:"W3", days:[15,16,17,18,19,20,21]},
+  {name:"Week 4 · Final Push",             tag:"W4", days:[22,23,24,25,26,27,28]},
+  {name:"Final 2 Days",                    tag:"GO", days:[29,30]},
+];
+const DAYS = {
+  1:{w:"Week 1 · Foundation",t:"Diagnostic Day",rest:false,tasks:["Travel: 30 vocab words","Lunch: 5 Text Completion","Night: Quant diagnostic / 40 mixed Quant","Build error log: topic, why, fix"]},
+  2:{w:"Week 1 · Foundation",t:"Arithmetic",rest:false,tasks:["30 new words + revise Day 1","Lunch: 5 Sentence Equivalence","Quant: %, ratios, fractions, averages","25 Quant questions","Mark careless mistakes"]},
+  3:{w:"Week 1 · Foundation",t:"Algebra",rest:false,tasks:["30 vocab words","Lunch: 1 short RC passage","Quant: linear, quadratic, inequalities, word problems","25–30 questions (aim 80%)"]},
+  4:{w:"Week 1 · Foundation",t:"TC + SE",rest:false,tasks:["30 vocab words","Lunch: 5 TC","Verbal: 15 TC + 15 SE","Predict blank → eliminate traps","Log why each wrong option tempted you"]},
+  5:{w:"Week 1 · Foundation",t:"Number Properties",rest:false,tasks:["30 vocab words","Lunch: 5 SE","Quant: divisibility, remainders, primes, LCM/HCF, units digit","30 questions"]},
+  6:{w:"Week 1 · Foundation",t:"Light Mixed (Sat)",rest:false,tasks:["Revise all Week 1 vocab","Lunch: 1 RC passage","15 Quant + 10 Verbal","Review the week's mistakes"]},
+  7:{w:"Week 1 · Foundation",t:"Sunday Mock + Review",rest:true,tasks:["9–11am: full mock (or 1 Quant + 1 Verbal section)","12–1:30: Quant review","3:30–5: Verbal review","6–7: build weak-topic list","Revise 100 vocab"]},
+  8:{w:"Week 2 · Timed",t:"Quant Timing",rest:false,tasks:["30 vocab","Lunch: 5 TC","Timed Quant: 20 q in 35 min","45 min review: speed, skipping, slips"]},
+  9:{w:"Week 2 · Timed",t:"RC Day",rest:false,tasks:["30 vocab","Lunch: 5 SE","RC: 2 short + 1 medium passage","Review main idea, tone, inference, evidence"]},
+  10:{w:"Week 2 · Timed",t:"Geometry",rest:false,tasks:["30 vocab","Lunch: 5 TC","Quant: triangles, circles, quads, coordinate, area/perimeter","30 questions"]},
+  11:{w:"Week 2 · Timed",t:"TC/SE Accuracy",rest:false,tasks:["30 vocab","Lunch: 1 short RC","Verbal: 20 TC + 15 SE","Target 70%+ — focus on sentence logic"]},
+  12:{w:"Week 2 · Timed",t:"Data Interpretation",rest:false,tasks:["30 vocab","Lunch: 5 SE","Quant: tables, graphs, mean/median/range, SD basics","25 questions"]},
+  13:{w:"Week 2 · Timed",t:"Mixed Review (Sat)",rest:false,tasks:["Revise Week 2 vocab","Lunch: 5 TC/SE","20 Quant + 10 Verbal","Review W1+W2 error log; mark repeats"]},
+  14:{w:"Week 2 · Timed",t:"Sunday Sectional",rest:true,tasks:["9–10:15: full Quant section","10:30–11:45: full Verbal section","12:30–1:30: Quant review","3:30–5: Verbal review","6–7: repair weakest Quant topic","Revise 100–150 vocab"]},
+  15:{w:"Week 3 · Score Jump",t:"Quant Hard Set",rest:false,tasks:["30 vocab","Lunch: 5 TC","Quant: 30 mixed hard questions","Hard algebra, number props, probability, geometry","Target 85%+"]},
+  16:{w:"Week 3 · Score Jump",t:"Verbal Logic",rest:false,tasks:["30 vocab","Lunch: 5 SE","Verbal: 15 TC + 15 SE + 1 RC","Pair SE synonyms; read sentence direction"]},
+  17:{w:"Week 3 · Score Jump",t:"Probability + Combinatorics",rest:false,tasks:["30 vocab","Lunch: 5 TC","Quant: probability, permutations, combinations, counting","25–30 questions"]},
+  18:{w:"Week 3 · Score Jump",t:"RC Heavy",rest:false,tasks:["30 vocab","Lunch: 5 SE","RC: 2 short + 2 medium","Every answer: where is the proof? No proof = skip"]},
+  19:{w:"Week 3 · Score Jump",t:"Quant Full Timed",rest:false,tasks:["30 vocab","Lunch: 5 TC","Full timed Quant section","Review wrong + guessed; note time sinks","Target 168+"]},
+  20:{w:"Week 3 · Score Jump",t:"Light Mixed (Sat)",rest:false,tasks:["Revise difficult vocab","Lunch: 1 RC","15 Quant + 15 Verbal","Review full error log; build Week 4 weak list"]},
+  21:{w:"Week 3 · Score Jump",t:"Sunday Full Mock",rest:true,tasks:["9–11am: full mock","12–1:30: Quant review","3:30–5: Verbal review","6–7: redo wrong Quant without solutions","Revise 150 vocab"]},
+  22:{w:"Week 4 · Final Push",t:"Fix Weakest Quant",rest:false,tasks:["30 vocab","Lunch: 5 TC","Pick weakest Quant topic from mock","30 focused questions"]},
+  23:{w:"Week 4 · Final Push",t:"Fix Weakest Verbal",rest:false,tasks:["30 vocab","Lunch: 5 SE","Pick weakest Verbal area","30 Verbal questions"]},
+  24:{w:"Week 4 · Final Push",t:"Quant Accuracy",rest:false,tasks:["30 vocab","Lunch: 5 TC","25 mixed: untimed first, then timed review","Target 90%+"]},
+  25:{w:"Week 4 · Final Push",t:"Verbal Timed Set",rest:false,tasks:["30 vocab","Lunch: 1 short RC","Verbal timed: 10 TC + 10 SE + 2 RC","Review deeply — no careless elimination"]},
+  26:{w:"Week 4 · Final Push",t:"Final Quant Section",rest:false,tasks:["Revise formulas","Lunch: 5 Verbal","Full timed Quant section","Review wrong + guessed + slow","Target 168–170"]},
+  27:{w:"Week 4 · Final Push",t:"Light Revision (Sat)",rest:false,tasks:["Revise vocab","Lunch: 5 TC/SE","10 Quant + 10 Verbal","Formula + error-log revision — don't exhaust"]},
+  28:{w:"Week 4 · Final Push",t:"Sunday Final Mock",rest:true,tasks:["9–11am: final full mock","12–1:30: Quant review","3:30–5: Verbal review","6–7: final weak-area repair","Revise formulas, traps, hard vocab"]},
+  29:{w:"Final 2 Days",t:"Light Correction",rest:false,tasks:["Vocab revision only","Lunch: 5 easy TC/SE","15 Quant + 10 Verbal","Review formulas + error log — no new topics"]},
+  30:{w:"Final 2 Days",t:"Calm Revision",rest:false,tasks:["Light vocab revision","Formula sheet + error log","20 difficult vocab","5 easy Quant — then sleep early"]},
+};
+const WEEKLY_TARGET = {vocab:[200,250], quant:[180,220], verbal:[80,120]};
+const DAILY_MIN = {vocab:30, quant:15, verbal:10, error:10};
+const COUNTER_DEFS = [
+  {key:"vocab", name:"Vocab words", step:5, min:30},
+  {key:"quant", name:"Quant questions", step:5, min:15},
+  {key:"verbal", name:"Verbal questions", step:1, min:10},
+  {key:"error", name:"Error log (min)", step:5, min:10},
+];
+
+/* ---------------- STATE + STORAGE ---------------- */
+const STORE_KEY = "gre_tracker_v1";
+let state = { testDate:"", activeDay:1, days:{}, scores:[], errors:[], vocab:[], vocabGoal:30, vocabDay:{date:"",reviewed:0,added:0} };
+let errType = "concept";
+let saveTimer = null;
+
+function dayState(n){
+  if(!state.days[n]) state.days[n] = {tasks:{}, counters:{vocab:0,quant:0,verbal:0,error:0}};
+  if(!state.days[n].counters) state.days[n].counters = {vocab:0,quant:0,verbal:0,error:0};
+  if(!state.days[n].tasks) state.days[n].tasks = {};
+  return state.days[n];
+}
+
+async function loadState(){
+  try{
+    const r = await window.storage.get(STORE_KEY);
+    if(r && r.value){ state = Object.assign(state, JSON.parse(r.value)); }
+  }catch(e){ /* first run or no storage — use defaults */ }
+}
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{ await window.storage.set(STORE_KEY, JSON.stringify(state)); toast(REMOTE_STORAGE?"synced":"saved"); }
+    catch(e){ toast("sync failed", true); }
+  }, 350);
+}
+function toast(msg, bad){
+  const t = document.getElementById("savedToast");
+  t.textContent = msg || "saved";
+  t.classList.toggle("bad", !!bad);
+  t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove("show"), 1100);
+}
+
+/* ---------------- DERIVED ---------------- */
+function dayComplete(n){
+  const d = DAYS[n]; const ds = state.days[n];
+  if(!ds || !ds.tasks) return false;
+  return d.tasks.every((_,i)=> ds.tasks[i]);
+}
+function dayPartial(n){
+  const ds = state.days[n];
+  if(!ds || !ds.tasks) return false;
+  return DAYS[n].tasks.some((_,i)=> ds.tasks[i]);
+}
+function bestScore(field){
+  let b = null;
+  state.scores.forEach(s=>{ if(typeof s[field]==="number" && (b===null || s[field]>b)) b=s[field]; });
+  return b;
+}
+function weekOf(day){ return WEEKS.findIndex(w=> w.days.includes(day)); }
+
+/* ---------------- RENDER ---------------- */
+function render(){
+  renderCountdown();
+  renderBubbles();
+  renderToday();
+  renderPlan();
+  renderVocab();
+  renderScores();
+  renderErrors();
+  renderStats();
+}
+
+function renderCountdown(){
+  document.getElementById("testDate").value = state.testDate || "";
+  const el = document.getElementById("cdNum");
+  if(state.testDate){
+    const diff = Math.ceil((new Date(state.testDate) - new Date().setHours(0,0,0,0))/86400000);
+    el.textContent = diff >= 0 ? diff : "0";
+  } else el.textContent = "—";
+}
+
+function renderBubbles(){
+  const box = document.getElementById("bubbles");
+  box.innerHTML = "";
+  let done=0;
+  for(let n=1;n<=30;n++){
+    const b = document.createElement("button");
+    b.className = "bub";
+    b.textContent = n;
+    if(DAYS[n].rest) b.classList.add("rest");
+    if(dayComplete(n)){ b.classList.add("done"); done++; }
+    else if(dayPartial(n)) b.classList.add("partial");
+    if(n===state.activeDay) b.classList.add("today");
+    b.setAttribute("aria-label","Go to day "+n);
+    b.onclick = ()=>{ state.activeDay=n; switchTab("today"); render(); saveState(); };
+    box.appendChild(b);
+  }
+  document.getElementById("stripCount").textContent = done+" / 30 complete";
+}
+
+function renderToday(){
+  const n = state.activeDay; const d = DAYS[n]; const ds = dayState(n);
+  document.getElementById("tWeek").textContent = d.w;
+  document.getElementById("tTitle").textContent = d.t;
+  document.getElementById("tDnum").textContent = "Day "+n+" of 30";
+  document.getElementById("prevDay").disabled = n<=1;
+  document.getElementById("nextDay").disabled = n>=30;
+
+  const ul = document.getElementById("taskList"); ul.innerHTML="";
+  d.tasks.forEach((task,i)=>{
+    const li = document.createElement("li");
+    if(ds.tasks[i]) li.classList.add("done");
+    li.innerHTML = '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="txt">'+task+'</span>';
+    li.onclick = ()=>{ ds.tasks[i]=!ds.tasks[i]; render(); saveState(); };
+    ul.appendChild(li);
+  });
+
+  const cbox = document.getElementById("counters"); cbox.innerHTML="";
+  COUNTER_DEFS.forEach(def=>{
+    const val = ds.counters[def.key] || 0;
+    const c = document.createElement("div");
+    c.className = "counter" + (val>=def.min ? " hit":"");
+    c.innerHTML =
+      '<div class="cname">'+def.name+'</div>'+
+      '<div class="cgoal">min '+def.min+'</div>'+
+      '<div class="crow">'+
+        '<button aria-label="decrease">−</button>'+
+        '<input type="number" inputmode="numeric" value="'+val+'">'+
+        '<button aria-label="increase">+</button>'+
+      '</div>';
+    const [minus,, plus] = c.querySelectorAll(".crow > *");
+    const input = c.querySelector("input");
+    minus.onclick = ()=>{ ds.counters[def.key]=Math.max(0,val-def.step); render(); saveState(); };
+    plus.onclick  = ()=>{ ds.counters[def.key]=val+def.step; render(); saveState(); };
+    input.onchange= ()=>{ ds.counters[def.key]=Math.max(0,parseInt(input.value)||0); render(); saveState(); };
+    cbox.appendChild(c);
+  });
+}
+
+function renderPlan(){
+  const v = document.getElementById("view-plan"); v.innerHTML="";
+  WEEKS.forEach(wk=>{
+    const block = document.createElement("div"); block.className="planweek";
+    block.innerHTML = '<div class="whead"><span class="tag">'+wk.tag+'</span>'+wk.name+'</div>';
+    wk.days.forEach(n=>{
+      const d = DAYS[n];
+      const det = document.createElement("details"); det.className="planday";
+      if(n===state.activeDay) det.open=false;
+      const cls = dayComplete(n)?"done":(dayPartial(n)?"partial":"");
+      det.innerHTML =
+        '<summary><span class="pd-dot '+cls+'">'+n+'</span>'+
+        '<span class="pd-title">'+d.t+'</span>'+
+        '<span class="pd-meta">'+(d.rest?"Sunday":"Day")+'</span></summary>'+
+        '<div class="pbody"><ul>'+d.tasks.map(t=>'<li>'+t+'</li>').join("")+
+        '<li style="margin-top:6px"><button class="btn ghost" data-go="'+n+'" style="padding:6px 12px;font-size:12px">Open this day</button></li>'+
+        '</ul></div>';
+      block.appendChild(det);
+    });
+    v.appendChild(block);
+  });
+  v.querySelectorAll("[data-go]").forEach(b=>{
+    b.onclick=(e)=>{ e.preventDefault(); state.activeDay=+b.dataset.go; switchTab("today"); render(); saveState(); };
+  });
+}
+
+function renderScores(){
+  const bq=bestScore("quant"), bv=bestScore("verbal");
+  const pos = s => Math.max(0, Math.min(100, ((s-130)/40)*100));
+  document.getElementById("bestQ").textContent = bq ?? "—";
+  document.getElementById("bestV").textContent = bv ?? "—";
+  document.getElementById("fillQ").style.width = (bq?pos(bq):0)+"%";
+  document.getElementById("fillV").style.width = (bv?pos(bv):0)+"%";
+
+  const comp = (bq && bv) ? bq+bv : null;
+  document.getElementById("bestComposite").textContent = comp ?? "—";
+  const dEl = document.getElementById("compDelta");
+  if(comp){
+    const diff = comp-326;
+    dEl.textContent = diff>=0 ? "+"+diff+" past goal" : diff+" to goal";
+    dEl.className = "delta "+(diff>=0?"over":"under");
+  } else dEl.textContent="";
+
+  const log = document.getElementById("scoreLog"); log.innerHTML="";
+  if(!state.scores.length){
+    log.innerHTML = '<li class="empty">No mocks logged yet. After your first Sunday mock, add the scores here to watch the meters fill.</li>';
+    return;
+  }
+  [...state.scores].reverse().forEach(s=>{
+    const li=document.createElement("li"); li.className="logitem";
+    li.innerHTML =
+      '<span class="ldate">'+(s.date||"")+'</span>'+
+      '<span class="lscores">'+(s.label?s.label+' · ':'')+'<span class="q">'+(s.quant??'–')+'Q</span> + <span class="v">'+(s.verbal??'–')+'V</span> = <b>'+((s.quant||0)+(s.verbal||0))+'</b></span>'+
+      '<button class="ldel" aria-label="Delete">×</button>';
+    li.querySelector(".ldel").onclick=()=>{ state.scores=state.scores.filter(x=>x.id!==s.id); render(); saveState(); };
+    log.appendChild(li);
+  });
+}
+
+function renderErrors(){
+  const box=document.getElementById("errList"); box.innerHTML="";
+  if(!state.errors.length){
+    box.innerHTML='<div class="empty">Your error log is empty. Snap the question and its answer, tag the topic, and note the fix — review is where the score comes from.</div>';
+    return;
+  }
+  let list=[...state.errors].reverse();
+  if(errFilter!=="all") list=list.filter(e=>e.topic===errFilter);
+  if(!list.length){ box.innerHTML='<div class="empty">No mistakes logged under this topic yet.</div>'; return; }
+  list.forEach(e=>{
+    const c=document.createElement("div"); c.className="errcard "+e.type;
+    const qKey="greimg:"+e.id+":q", aKey="greimg:"+e.id+":a";
+    let thumbs="";
+    if(e.hasQ) thumbs+='<button class="thumb" data-key="'+qKey+'" aria-label="View question photo"><span class="tlbl">Q</span><img alt="Question"></button>';
+    if(e.hasA) thumbs+='<button class="thumb" data-key="'+aKey+'" aria-label="View answer photo"><span class="tlbl">A</span><img alt="Answer"></button>';
+    c.innerHTML =
+      '<button class="ldel" aria-label="Delete">×</button>'+
+      '<div class="etop"><span class="etopic">'+esc(e.topic)+'</span>'+
+      '<span class="etype '+e.type+'">'+(e.type==="concept"?"concept":"slip")+'</span></div>'+
+      (e.why?'<div class="efield"><b>Why:</b> '+esc(e.why)+'</div>':'')+
+      (e.method?'<div class="efield"><b>Fix:</b> '+esc(e.method)+'</div>':'')+
+      (thumbs?'<div class="thumbrow">'+thumbs+'</div>':'');
+    c.querySelector(".ldel").onclick=async()=>{
+      if(e.hasQ){ try{await window.storage.delete(qKey);}catch(_){ } delete imgCache[qKey]; }
+      if(e.hasA){ try{await window.storage.delete(aKey);}catch(_){ } delete imgCache[aKey]; }
+      state.errors=state.errors.filter(x=>x.id!==e.id); render(); saveState();
+    };
+    c.querySelectorAll(".thumb").forEach(btn=>{
+      const key=btn.dataset.key; const img=btn.querySelector("img");
+      fetchImg(key).then(url=>{ if(url) img.src=url; });
+      btn.onclick=()=>openLightbox(key);
+    });
+    box.appendChild(c);
+  });
+}
+
+function renderStats(){
+  let done=0; for(let n=1;n<=30;n++) if(dayComplete(n)) done++;
+  document.getElementById("stDays").textContent=done;
+  // streak: consecutive completed days ending at the latest completed day
+  let streak=0,run=0;
+  for(let n=1;n<=30;n++){ if(dayComplete(n)){run++; streak=Math.max(streak,run);} else run=0; }
+  document.getElementById("stStreak").textContent=streak;
+  let totalTasks=0,doneTasks=0;
+  for(let n=1;n<=30;n++){ DAYS[n].tasks.forEach((_,i)=>{ totalTasks++; if(state.days[n]&&state.days[n].tasks[i])doneTasks++; }); }
+  document.getElementById("stTasks").textContent=Math.round(doneTasks/totalTasks*100)+"%";
+
+  // weekly bars for active day's week
+  const wi=weekOf(state.activeDay);
+  const wkDays = WEEKS[wi].days;
+  document.getElementById("weekStatsLabel").textContent = WEEKS[wi].name.split(" · ")[0]+" volume vs weekly target";
+  const sums={vocab:0,quant:0,verbal:0};
+  wkDays.forEach(n=>{ const c=(state.days[n]&&state.days[n].counters)||{}; sums.vocab+=c.vocab||0; sums.quant+=c.quant||0; sums.verbal+=c.verbal||0; });
+  document.getElementById("weekBars").innerHTML = barsHTML(sums, WEEKLY_TARGET);
+
+  // all-time
+  const tot={vocab:0,quant:0,verbal:0};
+  for(let n=1;n<=30;n++){ const c=(state.days[n]&&state.days[n].counters)||{}; tot.vocab+=c.vocab||0; tot.quant+=c.quant||0; tot.verbal+=c.verbal||0; }
+  document.getElementById("totalBars").innerHTML =
+    simpleBar("Vocab words", tot.vocab, "var(--signal)")+
+    simpleBar("Quant questions", tot.quant, "var(--quant)")+
+    simpleBar("Verbal questions", tot.verbal, "var(--verbal)");
+}
+function barsHTML(sums, targets){
+  const colors={vocab:"var(--signal)",quant:"var(--quant)",verbal:"var(--verbal)"};
+  const names={vocab:"Vocab",quant:"Quant questions",verbal:"Verbal questions"};
+  return Object.keys(targets).map(k=>{
+    const [lo,hi]=targets[k]; const pct=Math.min(100, sums[k]/hi*100);
+    const ok = sums[k]>=lo;
+    return '<div class="bar"><div class="bhead"><span>'+names[k]+(ok?' ✓':'')+'</span>'+
+      '<span class="bv">'+sums[k]+' / '+lo+'–'+hi+'</span></div>'+
+      '<div class="btrack"><div class="bfill" style="width:'+pct+'%;background:'+colors[k]+'"></div></div></div>';
+  }).join("");
+}
+function simpleBar(name,val,color){
+  const cap = Math.max(val,1);
+  return '<div class="bar"><div class="bhead"><span>'+name+'</span><span class="bv">'+val+'</span></div>'+
+    '<div class="btrack"><div class="bfill" style="width:'+(val/cap*100)+'%;background:'+color+'"></div></div></div>';
+}
+
+/* ---------------- ERROR-LOG: TOPICS, IMAGES, LIGHTBOX ---------------- */
+const TOPICS = {
+  "Quant":["Arithmetic","Algebra","Number Properties","Geometry","Data Interpretation","Probability & Combinatorics","Quant — timing/mixed"],
+  "Verbal":["Text Completion","Sentence Equivalence","RC — main idea","RC — inference","RC — tone & structure","Vocabulary"]
+};
+const imgCache = {};
+let pendingImg = {q:null, a:null};
+let errFilter = "all";
+
+function esc(s){ return (s||"").replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+function compressImage(file, maxDim){
+  maxDim = maxDim || 1100;
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width, h=img.height;
+        if(w>maxDim || h>maxDim){ const s=maxDim/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+        const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+        cv.getContext("2d").drawImage(img,0,0,w,h);
+        let q=0.62, url=cv.toDataURL("image/jpeg",q);
+        while(url.length>900000 && q>0.3){ q-=0.1; url=cv.toDataURL("image/jpeg",q); }
+        resolve(url);
+      };
+      img.onerror=reject; img.src=reader.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+
+async function fetchImg(key){
+  if(imgCache[key]!==undefined) return imgCache[key];
+  try{ const r=await window.storage.get(key); imgCache[key]= r ? r.value : null; }
+  catch(e){ imgCache[key]=null; }
+  return imgCache[key];
+}
+
+async function openLightbox(key){
+  const url=await fetchImg(key); if(!url) return;
+  const lb=document.getElementById("lightbox");
+  lb.querySelector("img").src=url; lb.classList.add("show");
+}
+function closeLightbox(){ document.getElementById("lightbox").classList.remove("show"); }
+
+function buildTopicSelect(){
+  let opts='<option value="" disabled selected>Select topic…</option>';
+  let fopts='<option value="all">All topics</option>';
+  Object.keys(TOPICS).forEach(g=>{
+    opts+='<optgroup label="'+g+'">'; fopts+='<optgroup label="'+g+'">';
+    TOPICS[g].forEach(t=>{ opts+='<option>'+t+'</option>'; fopts+='<option>'+t+'</option>'; });
+    opts+='</optgroup>'; fopts+='</optgroup>';
+  });
+  document.getElementById("eTopic").innerHTML=opts;
+  document.getElementById("errFilterSel").innerHTML=fopts;
+}
+
+function wireUploadSlot(slotId, slotKey){
+  const slot=document.getElementById(slotId);
+  const input=slot.querySelector("input[type=file]");
+  const prev=slot.querySelector(".upprev");
+  const face=slot.querySelector(".uplabel");
+  const img=prev.querySelector("img");
+  input.onchange=async()=>{
+    const f=input.files[0]; if(!f) return;
+    try{
+      const url=await compressImage(f);
+      pendingImg[slotKey]=url; img.src=url; prev.hidden=false; face.style.display="none";
+    }catch(e){ alert("Couldn't read that image. Try a different photo."); }
+  };
+  prev.querySelector(".upx").onclick=()=>{
+    pendingImg[slotKey]=null; input.value=""; prev.hidden=true; face.style.display="";
+  };
+}
+function resetUploadSlots(){
+  pendingImg={q:null,a:null};
+  ["slotQ","slotA"].forEach(id=>{
+    const s=document.getElementById(id);
+    s.querySelector("input[type=file]").value="";
+    s.querySelector(".upprev").hidden=true;
+    s.querySelector(".uplabel").style.display="";
+  });
+}
+
+function setupErrorsUI(){
+  buildTopicSelect();
+  wireUploadSlot("slotQ","q");
+  wireUploadSlot("slotA","a");
+  document.getElementById("errFilterSel").onchange=(e)=>{ errFilter=e.target.value; renderErrors(); };
+  const lb=document.getElementById("lightbox");
+  lb.onclick=(e)=>{ if(e.target===lb || e.target.classList.contains("lbx")) closeLightbox(); };
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeLightbox(); });
+}
+
+/* ---------------- VOCAB: BANK + FLASHCARDS ---------------- */
+let vp = { active:false, filter:"learning", order:"random", queue:[], idx:0, flipped:false, green:0, red:0, poolSize:0 };
+let vidCounter = 0;
+
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function ensureVocabDay(){
+  const t=todayStr();
+  if(!state.vocabDay || state.vocabDay.date!==t) state.vocabDay={date:t, reviewed:0, added:0};
+  return state.vocabDay;
+}
+
+function parseBulkLine(ln){
+  ln=(ln||"").trim(); if(!ln) return null;
+  const seps=['=','\u2014','\u2013',':','\t'];
+  let pos=-1, sep=null;
+  seps.forEach(s=>{ const i=ln.indexOf(s); if(i>0 && (pos===-1 || i<pos)){ pos=i; sep=s; } });
+  if(pos===-1){ const i=ln.indexOf(' - '); if(i>0){ pos=i; sep=' - '; } }
+  if(pos===-1) return null;
+  return { word:ln.slice(0,pos).trim(), meaning:ln.slice(pos+sep.length).trim() };
+}
+function addWordObj(word,meaning,note){
+  word=(word||"").trim(); meaning=(meaning||"").trim();
+  if(!word||!meaning) return false;
+  state.vocab.push({ id:"w"+Date.now()+"_"+(vidCounter++), word, meaning, note:(note||"").trim(), box:0, hard:false, mastered:false, lastReviewed:0 });
+  ensureVocabDay().added++;
+  return true;
+}
+function vocabPool(){
+  return state.vocab.filter(w=>{
+    if(vp.filter==="all") return true;
+    if(vp.filter==="hard") return !!w.hard;
+    return !w.mastered;
+  });
+}
+function startPractice(){
+  let pool=vocabPool().slice();
+  if(vp.order==="hard"){
+    pool.sort((a,b)=> ((b.hard?1:0)-(a.hard?1:0)) || ((a.box||0)-(b.box||0)) || ((a.lastReviewed||0)-(b.lastReviewed||0)) );
+  } else {
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=pool[i]; pool[i]=pool[j]; pool[j]=tmp; }
+  }
+  vp.queue=pool; vp.poolSize=pool.length; vp.idx=0; vp.flipped=false; vp.green=0; vp.red=0; vp.active=true;
+  renderVocab();
+}
+function gradeCard(good){
+  const w=vp.queue[vp.idx]; if(!w) return;
+  ensureVocabDay().reviewed++;
+  if(good){ w.box=Math.min(5,(w.box||0)+1); if(w.box>=3) w.hard=false; if(w.box>=5) w.mastered=true; vp.green++; }
+  else { w.box=0; w.hard=true; w.mastered=false; vp.red++; vp.queue.push(w); }
+  w.lastReviewed=Date.now();
+  vp.idx++; vp.flipped=false;
+  renderVocab(); saveState();
+}
+
+function renderVocab(){
+  const total=state.vocab.length;
+  document.getElementById("vCount").textContent=total;
+
+  // daily goal
+  const day=ensureVocabDay();
+  const goal=state.vocabGoal||30;
+  const pct=goal>0?Math.min(100, day.reviewed/goal*100):0;
+  document.getElementById("vgReviewed").textContent=day.reviewed;
+  document.getElementById("vgGoalNum").textContent=goal;
+  document.getElementById("vgAdded").textContent=day.added;
+  document.getElementById("vgFill").style.width=pct+"%";
+  const met=goal>0 && day.reviewed>=goal;
+  document.getElementById("vgDone").hidden=!met;
+  document.getElementById("vGoalCard").classList.toggle("met",met);
+
+  // word bank list
+  const q=(document.getElementById("vSearch").value||"").toLowerCase();
+  const listBox=document.getElementById("vList");
+  let words=state.vocab.slice().reverse();
+  if(q) words=words.filter(w=> w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q));
+  if(!total) listBox.innerHTML='<div class="empty">Words you add will show here.</div>';
+  else if(!words.length) listBox.innerHTML='<div class="empty">No words match your search.</div>';
+  else listBox.innerHTML=words.map(w=>{
+    const st=w.mastered?'mastered':(w.hard?'hard':'learning');
+    return '<div class="vrow"><span class="vstatus '+st+'" title="'+st+'"></span>'+
+      '<span class="vword">'+esc(w.word)+'</span>'+
+      '<span class="vmean">'+esc(w.meaning)+'</span>'+
+      '<span class="vbox">L'+(w.box||0)+'</span>'+
+      '<button class="vdel" data-id="'+w.id+'" aria-label="Delete">×</button></div>';
+  }).join("");
+  listBox.querySelectorAll(".vdel").forEach(b=> b.onclick=()=>{ state.vocab=state.vocab.filter(x=>x.id!=b.dataset.id); render(); saveState(); });
+
+  // practice
+  const area=document.getElementById("vpArea");
+  const pool=vocabPool();
+  if(!total){ area.innerHTML='<div class="empty">No words yet. Add some below, then come back to practice them as flashcards.</div>'; return; }
+  if(!vp.active){
+    if(!pool.length){ area.innerHTML='<div class="empty">Nothing to practice in this set — switch to “All”, or add more words.</div>'; }
+    else{
+      area.innerHTML='<div class="empty" style="padding:4px 8px 14px">'+pool.length+' word'+(pool.length>1?'s':'')+' in this set · '+(vp.order==="random"?"random order":"hardest first")+'.</div>'+
+        '<button class="btn" id="vpStart" style="width:100%">Start practice</button>';
+      document.getElementById("vpStart").onclick=startPractice;
+    }
+    return;
+  }
+  if(vp.idx>=vp.queue.length){
+    area.innerHTML='<div class="flash-prog">Round complete</div>'+
+      '<div class="empty">You remembered '+vp.green+' of '+vp.poolSize+' word'+(vp.poolSize!==1?'s':'')+'.'+(vp.red?' Brought back '+vp.red+'.':'')+'</div>'+
+      '<div class="flash-actions"><button class="btn ghost" id="vpAgain">Practice again</button><button class="btn" id="vpDone">Done</button></div>';
+    document.getElementById("vpAgain").onclick=startPractice;
+    document.getElementById("vpDone").onclick=()=>{ vp.active=false; renderVocab(); };
+    return;
+  }
+  const w=vp.queue[vp.idx];
+  const left=vp.queue.length - vp.idx;
+  const front='<div class="fword">'+esc(w.word)+'</div><div class="fhint">tap to reveal meaning</div>';
+  const back='<div class="fmean">'+esc(w.meaning)+'</div>'+(w.note?'<div class="fnote">'+esc(w.note)+'</div>':'');
+  area.innerHTML='<div class="flash-prog"><span style="color:var(--good)">✓ '+vp.green+'</span> &nbsp; <span style="color:var(--bad)">✗ '+vp.red+'</span> &nbsp;·&nbsp; '+left+' left</div>'+
+    '<button class="flash-card" id="flashCard">'+(vp.flipped?back:front)+'</button>'+
+    (vp.flipped?'<div class="flash-actions"><button class="btn flash-bad" id="vGradeBad">✗ Forgot</button><button class="btn flash-good" id="vGradeGood">✓ I remember</button></div>':'');
+  document.getElementById("flashCard").onclick=()=>{ if(!vp.flipped){ vp.flipped=true; renderVocab(); } };
+  if(vp.flipped){
+    document.getElementById("vGradeBad").onclick=()=>gradeCard(false);
+    document.getElementById("vGradeGood").onclick=()=>gradeCard(true);
+  }
+}
+
+function setupVocabUI(){
+  document.querySelectorAll("#vpFilter .chip").forEach(c=>{
+    c.onclick=()=>{ vp.filter=c.dataset.f; vp.active=false;
+      document.querySelectorAll("#vpFilter .chip").forEach(x=>x.setAttribute("aria-pressed", x===c));
+      renderVocab(); };
+  });
+  document.querySelectorAll("#vpOrder .chip").forEach(c=>{
+    c.onclick=()=>{ vp.order=c.dataset.o; vp.active=false;
+      document.querySelectorAll("#vpOrder .chip").forEach(x=>x.setAttribute("aria-pressed", x===c));
+      renderVocab(); };
+  });
+  const gi=document.getElementById("vGoalInput");
+  gi.value=state.vocabGoal||30;
+  gi.onchange=()=>{ const v=Math.max(1,parseInt(gi.value)||30); state.vocabGoal=v; gi.value=v; renderVocab(); saveState(); };
+  document.getElementById("addWord").onclick=()=>{
+    const W=document.getElementById("vWord"), M=document.getElementById("vMeaning"), N=document.getElementById("vNote");
+    if(addWordObj(W.value,M.value,N.value)){ W.value=M.value=N.value=""; W.focus(); render(); saveState(); }
+    else alert("Enter both a word and its meaning.");
+  };
+  document.getElementById("addBulk").onclick=()=>{
+    const ta=document.getElementById("vBulk");
+    let n=0; ta.value.split("\n").forEach(ln=>{ const p=parseBulkLine(ln); if(p && addWordObj(p.word,p.meaning,"")) n++; });
+    if(n){ ta.value=""; render(); saveState(); }
+    alert(n+" word"+(n!==1?"s":"")+" added.");
+  };
+  document.getElementById("vSearch").oninput=()=>renderVocab();
+}
+
+/* ---------------- EVENTS ---------------- */
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.view===name));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active", v.id==="view-"+name));
+}
+document.querySelectorAll(".tab").forEach(t=> t.onclick=()=>switchTab(t.dataset.view));
+
+document.getElementById("prevDay").onclick=()=>{ if(state.activeDay>1){state.activeDay--; render(); saveState();} };
+document.getElementById("nextDay").onclick=()=>{ if(state.activeDay<30){state.activeDay++; render(); saveState();} };
+document.getElementById("testDate").onchange=(e)=>{ state.testDate=e.target.value; renderCountdown(); saveState(); };
+
+document.getElementById("addScore").onclick=()=>{
+  const q=parseInt(document.getElementById("sQuant").value);
+  const v=parseInt(document.getElementById("sVerbal").value);
+  const label=document.getElementById("sLabel").value.trim();
+  if(isNaN(q)&&isNaN(v)) return;
+  state.scores.push({id:Date.now(), date:new Date().toISOString().slice(5,10), label, quant:isNaN(q)?null:q, verbal:isNaN(v)?null:v});
+  document.getElementById("sQuant").value=""; document.getElementById("sVerbal").value=""; document.getElementById("sLabel").value="";
+  render(); saveState();
+};
+document.querySelectorAll("#eTypeChips .chip").forEach(c=>{
+  c.onclick=()=>{ errType=c.dataset.type; document.querySelectorAll("#eTypeChips .chip").forEach(x=>x.setAttribute("aria-pressed", x===c)); };
+});
+document.getElementById("addErr").onclick=async()=>{
+  const topic=document.getElementById("eTopic").value;
+  if(!topic){ alert("Pick a topic first."); return; }
+  const id=Date.now();
+  const err={id, topic, type:errType,
+    why:document.getElementById("eWhy").value.trim(),
+    method:document.getElementById("eMethod").value.trim(),
+    hasQ:!!pendingImg.q, hasA:!!pendingImg.a};
+  try{
+    if(pendingImg.q){ await window.storage.set("greimg:"+id+":q", pendingImg.q); imgCache["greimg:"+id+":q"]=pendingImg.q; }
+    if(pendingImg.a){ await window.storage.set("greimg:"+id+":a", pendingImg.a); imgCache["greimg:"+id+":a"]=pendingImg.a; }
+  }catch(e){ err.hasQ=false; err.hasA=false; alert("Saved the note, but the photo was too large to store."); }
+  state.errors.push(err);
+  document.getElementById("eWhy").value=""; document.getElementById("eMethod").value="";
+  document.getElementById("eTopic").selectedIndex=0;
+  resetUploadSlots();
+  render(); saveState();
+};
+
+/* ---------------- INIT ---------------- */
+/* ---------------- INIT ---------------- */
+async function boot(){ await loadState(); setupErrorsUI(); setupVocabUI(); render(); }
+
+function applySyncCode(raw, reload){
+  const code=(raw||"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"");
+  if(!code){ alert("Enter a code using letters, numbers, - or _."); return; }
+  SYNC_CODE=code;
+  try{ localStorage.setItem("gre_sync_code", code); }catch(e){}
+  document.getElementById("syncGate").hidden=true;
+  if(reload){ location.reload(); return; }
+  showSyncTag(); boot();
+}
+function showSyncGate(isChange){
+  const g=document.getElementById("syncGate");
+  document.getElementById("syncTitle").textContent = isChange ? "Change sync code" : "Enter your sync code";
+  const inp=document.getElementById("syncInput");
+  inp.value=SYNC_CODE||"";
+  g.hidden=false; inp.focus();
+  const go=document.getElementById("syncGo");
+  go.onclick=()=>applySyncCode(inp.value, !!isChange);
+  inp.onkeydown=(e)=>{ if(e.key==="Enter") go.click(); };
+}
+function showSyncTag(){
+  if(!REMOTE_STORAGE) return;
+  const t=document.getElementById("syncTag");
+  document.getElementById("syncTagCode").textContent=SYNC_CODE;
+  t.hidden=false; t.onclick=()=>showSyncGate(true);
+}
+
+if(REMOTE_STORAGE && NEEDS_SYNC_CODE){ showSyncGate(false); }
+else { showSyncTag(); boot(); }
+</script>
+</body>
+</html>
