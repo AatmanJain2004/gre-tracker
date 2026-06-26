@@ -47,8 +47,14 @@
   .countdown{text-align:right;}
   .countdown .num{font-family:'Space Mono',monospace;font-weight:700;font-size:30px;line-height:1;color:var(--ink);}
   .countdown .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
-  .countdown input{font-family:'Space Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;color:var(--muted);background:var(--surface);margin-top:4px;}
-  .countdown input:focus{outline:2px solid var(--signal);outline-offset:1px;border-color:var(--signal);}
+  .datefields{display:flex;flex-direction:column;gap:4px;margin-top:6px;align-items:flex-end;}
+  .datefield{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .datefield span{min-width:30px;text-align:right;}
+  .datefield input{font-family:'Space Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;color:var(--ink);background:var(--surface);}
+  .datefield input:focus{outline:2px solid var(--signal);outline-offset:1px;border-color:var(--signal);}
+  .jumptoday{display:block;margin:0 auto 14px;background:var(--signal);color:#fff;border:none;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;padding:8px 16px;border-radius:20px;cursor:pointer;}
+  .jumptoday[hidden]{display:none;}
+  .jumptoday:hover{background:var(--signal-deep);}
 
   /* ---------- SCANTRON STRIP ---------- */
   .scantron{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;box-shadow:var(--shadow);margin-bottom:16px;}
@@ -60,6 +66,7 @@
   .bub.done{background:var(--ink);border-color:var(--ink);color:#fff;}
   .bub.partial{background:var(--signal);border-color:var(--signal);color:#fff;}
   .bub.today{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--signal);}
+  .bub.viewing{border-color:var(--ink);border-width:2px;}
   .bub.rest{border-style:dashed;}
   .bub:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
 
@@ -320,7 +327,10 @@
     <div class="countdown">
       <div class="num" id="cdNum">—</div>
       <div class="lbl">days to test</div>
-      <input type="date" id="testDate" aria-label="Test date">
+      <div class="datefields">
+        <label class="datefield"><span>Day 1</span><input type="date" id="startDate" aria-label="Day 1 date"></label>
+        <label class="datefield"><span>Test</span><input type="date" id="testDate" aria-label="Test date"></label>
+      </div>
     </div>
   </div>
 
@@ -352,6 +362,7 @@
       </div>
       <button id="nextDay" aria-label="Next day">›</button>
     </div>
+    <button class="jumptoday" id="jumpToday" hidden></button>
 
     <div class="card">
       <p class="sectionlabel">Today's checklist</p>
@@ -670,6 +681,11 @@ function bestScore(field){
 }
 function weekOf(day){ return WEEKS.findIndex(w=> w.days.includes(day)); }
 
+function parseYMD(s){ if(!s) return null; const p=s.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function planDate(n){ const sd=parseYMD(state.startDate); if(!sd) return null; const dt=new Date(sd); dt.setDate(dt.getDate()+(n-1)); return dt; }
+function fmtDate(dt){ return dt.toLocaleDateString(undefined,{weekday:"short", day:"numeric", month:"short"}); }
+function todayPlanDay(){ const sd=parseYMD(state.startDate); if(!sd) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.floor((t - sd)/86400000)+1; }
+
 /* ---------------- RENDER ---------------- */
 function render(){
   renderCountdown();
@@ -684,6 +700,7 @@ function render(){
 
 function renderCountdown(){
   document.getElementById("testDate").value = state.testDate || "";
+  document.getElementById("startDate").value = state.startDate || "";
   const el = document.getElementById("cdNum");
   if(state.testDate){
     const diff = Math.ceil((new Date(state.testDate) - new Date().setHours(0,0,0,0))/86400000);
@@ -702,7 +719,11 @@ function renderBubbles(){
     if(DAYS[n].rest) b.classList.add("rest");
     if(dayComplete(n)){ b.classList.add("done"); done++; }
     else if(dayPartial(n)) b.classList.add("partial");
-    if(n===state.activeDay) b.classList.add("today");
+    if(state.startDate){
+      const td=todayPlanDay();
+      if(n===state.activeDay) b.classList.add("viewing");
+      if(td>=1 && td<=30 && n===td) b.classList.add("today");
+    } else if(n===state.activeDay) b.classList.add("today");
     b.setAttribute("aria-label","Go to day "+n);
     b.onclick = ()=>{ state.activeDay=n; switchTab("today"); render(); saveState(); };
     box.appendChild(b);
@@ -714,9 +735,19 @@ function renderToday(){
   const n = state.activeDay; const d = DAYS[n]; const ds = dayState(n);
   document.getElementById("tWeek").textContent = d.w;
   document.getElementById("tTitle").textContent = d.t;
-  document.getElementById("tDnum").textContent = "Day "+n+" of 30";
+  const dt = planDate(n);
+  document.getElementById("tDnum").textContent = dt ? (fmtDate(dt)+" · Day "+n) : ("Day "+n+" of 30");
   document.getElementById("prevDay").disabled = n<=1;
   document.getElementById("nextDay").disabled = n>=30;
+
+  const jt = document.getElementById("jumpToday");
+  const td = todayPlanDay();
+  if(state.startDate && td!==null){
+    if(td<1){ jt.hidden=false; jt.textContent="Sprint starts "+fmtDate(planDate(1)); jt.onclick=()=>{ state.activeDay=1; render(); saveState(); }; }
+    else if(td>30){ jt.hidden=false; jt.textContent="Past Day 30 — review mode"; jt.onclick=()=>{ state.activeDay=30; render(); saveState(); }; }
+    else if(td!==n){ jt.hidden=false; jt.textContent="Jump to today · Day "+td; jt.onclick=()=>{ state.activeDay=td; render(); saveState(); }; }
+    else jt.hidden=true;
+  } else jt.hidden=true;
 
   const ul = document.getElementById("taskList"); ul.innerHTML="";
   d.tasks.forEach((task,i)=>{
@@ -762,7 +793,7 @@ function renderPlan(){
       det.innerHTML =
         '<summary><span class="pd-dot '+cls+'">'+n+'</span>'+
         '<span class="pd-title">'+d.t+'</span>'+
-        '<span class="pd-meta">'+(d.rest?"Sunday":"Day")+'</span></summary>'+
+        '<span class="pd-meta">'+(state.startDate?fmtDate(planDate(n)):(d.rest?"Sunday":"Day"))+'</span></summary>'+
         '<div class="pbody"><ul>'+d.tasks.map(t=>'<li>'+t+'</li>').join("")+
         '<li style="margin-top:6px"><button class="btn ghost" data-go="'+n+'" style="padding:6px 12px;font-size:12px">Open this day</button></li>'+
         '</ul></div>';
@@ -1143,6 +1174,12 @@ document.querySelectorAll(".tab").forEach(t=> t.onclick=()=>switchTab(t.dataset.
 document.getElementById("prevDay").onclick=()=>{ if(state.activeDay>1){state.activeDay--; render(); saveState();} };
 document.getElementById("nextDay").onclick=()=>{ if(state.activeDay<30){state.activeDay++; render(); saveState();} };
 document.getElementById("testDate").onchange=(e)=>{ state.testDate=e.target.value; renderCountdown(); saveState(); };
+document.getElementById("startDate").onchange=(e)=>{
+  state.startDate=e.target.value;
+  const td=todayPlanDay();
+  if(td!==null) state.activeDay = td<1 ? 1 : (td>30 ? 30 : td);
+  render(); saveState();
+};
 
 document.getElementById("addScore").onclick=()=>{
   const q=parseInt(document.getElementById("sQuant").value);
@@ -1177,7 +1214,14 @@ document.getElementById("addErr").onclick=async()=>{
 
 /* ---------------- INIT ---------------- */
 /* ---------------- INIT ---------------- */
-async function boot(){ await loadState(); setupErrorsUI(); setupVocabUI(); render(); }
+async function boot(){
+  await loadState();
+  if(state.startDate){
+    const td=todayPlanDay();
+    state.activeDay = td<1 ? 1 : (td>30 ? 30 : td);
+  }
+  setupErrorsUI(); setupVocabUI(); render();
+}
 
 function applySyncCode(raw, reload){
   const code=(raw||"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"");
